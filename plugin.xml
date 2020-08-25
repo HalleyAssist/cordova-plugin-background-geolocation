@@ -3,7 +3,7 @@
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
         id="cordova-plugin-background-geolocation"
-        version="3.1.0">
+        version="3.2.0">
     <name>CDVBackgroundGeolocation</name>
     <description>Cordova Background Geolocation Plugin</description>
     <license>Apache-2.0</license>
@@ -38,18 +38,8 @@
         <framework src="com.android.support:appcompat-v7:$ANDROID_SUPPORT_LIBRARY_VERSION" />
         <framework src="android/dependencies.gradle" custom="true" type="gradleReference"/>
         <!-- Generated with gen_sources.sh @ 2019-09-24 08:28:46 -->
-        <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/evgenii/jsevaluator/HandlerWrapper.java" target-dir="src/com/evgenii/jsevaluator" />
-        <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/evgenii/jsevaluator/interfaces/CallJavaResultInterface.java" target-dir="src/com/evgenii/jsevaluator/interfaces" />
-        <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/evgenii/jsevaluator/interfaces/HandlerWrapperInterface.java" target-dir="src/com/evgenii/jsevaluator/interfaces" />
-        <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/evgenii/jsevaluator/interfaces/JsCallback.java" target-dir="src/com/evgenii/jsevaluator/interfaces" />
-        <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/evgenii/jsevaluator/interfaces/JsEvaluatorInterface.java" target-dir="src/com/evgenii/jsevaluator/interfaces" />
-        <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/evgenii/jsevaluator/interfaces/WebViewWrapperInterface.java" target-dir="src/com/evgenii/jsevaluator/interfaces" />
-        <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/evgenii/jsevaluator/JavaScriptInterface.java" target-dir="src/com/evgenii/jsevaluator" />
-        <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/evgenii/jsevaluator/JsEvaluator.java" target-dir="src/com/evgenii/jsevaluator" />
-        <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/evgenii/jsevaluator/JsFunctionCallFormatter.java" target-dir="src/com/evgenii/jsevaluator" />
-        <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/evgenii/jsevaluator/WebViewWrapper.java" target-dir="src/com/evgenii/jsevaluator" />
         <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/marianhello/bgloc/cordova/ConfigMapper.java" target-dir="src/com/marianhello/bgloc/cordova" />
-        <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/marianhello/bgloc/cordova/headless/JsEvaluatorTaskRunner.java" target-dir="src/com/marianhello/bgloc/cordova/headless" />
+        <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/marianhello/bgloc/cordova/headless/UDPTaskRunner.java" target-dir="src/com/marianhello/bgloc/cordova/headless" />
         <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/marianhello/bgloc/cordova/PluginRegistry.java" target-dir="src/com/marianhello/bgloc/cordova" />
         <source-file src="android/CDVBackgroundGeolocation/src/main/java/com/tenforwardconsulting/bgloc/cordova/BackgroundGeolocationPlugin.java" target-dir="src/com/tenforwardconsulting/bgloc/cordova" />
         <source-file src="android/common/src/main/java/com/marianhello/bgloc/BackgroundGeolocationFacade.java" target-dir="src/com/marianhello/bgloc" />

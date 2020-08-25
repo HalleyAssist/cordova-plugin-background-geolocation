@@ -21,7 +21,7 @@ import com.marianhello.bgloc.PluginDelegate;
 import com.marianhello.bgloc.PluginException;
 import com.marianhello.bgloc.cordova.ConfigMapper;
 import com.marianhello.bgloc.cordova.PluginRegistry;
-import com.marianhello.bgloc.cordova.headless.JsEvaluatorTaskRunner;
+import com.marianhello.bgloc.cordova.headless.UDPTaskRunner;
 import com.marianhello.bgloc.data.BackgroundActivity;
 import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.logging.LogEntry;
@@ -340,7 +340,7 @@ public class BackgroundGeolocationPlugin extends CordovaPlugin implements Plugin
             logger.debug("Registering headless task");
             try {
                 PluginRegistry.getInstance().registerHeadlessTask(data.getString(0));
-                facade.registerHeadlessTask(JsEvaluatorTaskRunner.class.getName());
+                facade.registerHeadlessTask(UDPTaskRunner.class.getName());
             } catch (JSONException e) {
                 callbackContext.sendPluginResult(ErrorPluginResult.from("Registering headless task failed", e, PluginException.JSON_ERROR));
             }

@@ -734,20 +734,10 @@ export interface BackgroundGeolocationPlugin {
    * event listeners will not be triggered until the app is relaunched.
    *
    * @example
-   *  BackgroundGeolocation.headlessTask(function(event) {
-   *
-   *      if (event.name === 'location' || event.name === 'stationary') {
-   *          var xhr = new XMLHttpRequest();
-   *          xhr.open('POST', 'http://192.168.81.14:3000/headless');
-   *          xhr.setRequestHeader('Content-Type', 'application/json');
-   *          xhr.send(JSON.stringify(event.params));
-   *      }
-   *
-   *      return 'Processing event: ' + event.name; // will be logged
-   *  });
+   *  BackgroundGeolocation.headlessTask('important data for task completion');
    */
   headlessTask(
-    task: (event: HeadlessTaskEvent) => void
+    task: string
   ): void;
 
   /**

@@ -105,19 +105,21 @@ public class UDPTaskRunner extends AbstractTaskRunner {
             Thread thread = new Thread(() -> {
                 DatagramSocket socket = null;
                 try {
+                    Log.d(TAG, "runTask: Opening Socket");
                     socket = new DatagramSocket();
                     DatagramPacket packet = new DatagramPacket(sPayload, sPayload.length, InetAddress.getByName(url),
                             port);
                     socket.send(packet);
+                    Log.d(TAG, "runTask: Packet sent successfully");
                 } catch (IOException e) {
                     Log.e(TAG, "runTask: Failed to send packet {}", e);
                 } finally {
                     if (socket != null)
                         socket.close();
+                    Log.d(TAG, "runTask: Closed Socket");
                 }
             });
             thread.start();
-            Log.d(TAG, "runTask: Packet sent successfully");
             task.onResult("success");
         } catch (JSONException e) {
             Log.w(TAG, "runTask: Failed to send payload", e);

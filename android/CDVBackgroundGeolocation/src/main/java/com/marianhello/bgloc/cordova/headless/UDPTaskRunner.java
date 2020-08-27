@@ -17,6 +17,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -35,7 +36,7 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public class UDPTaskRunner extends AbstractTaskRunner {
-    public static final String BUNDLE_KEY = "UdpTaskRunner";
+    public static final String TAG = "UdpTaskRunner";
 
     public UDPTaskRunner() {
     }
@@ -43,7 +44,7 @@ public class UDPTaskRunner extends AbstractTaskRunner {
     @Override
     public void runTask(final Task task) {
         String headlessTask = PluginRegistry.getInstance().getHeadlessTask();
-        Log.i(BUNDLE_KEY, "runTask: " + task.getName() + " " + headlessTask);
+        Log.i(TAG, "runTask: " + task.getName() + " " + headlessTask);
 
         if (headlessTask == null) {
             task.onError("Cannot run task due to task not registered");
@@ -61,24 +62,12 @@ public class UDPTaskRunner extends AbstractTaskRunner {
         try {
             properties = new JSONObject(headlessTask);
         } catch (JSONException e) {
-            Log.w(BUNDLE_KEY, "runTask: Failed to parse properties", e);
+            Log.w(TAG, "runTask: Failed to parse properties", e);
             task.onError("Failed to parse properties");
             return;
         }
 
-        Log.i(BUNDLE_KEY, "runTask: Properties parsed");
-
-        DatagramSocket socket;
-        // udp socket open
-        try {
-            socket = new DatagramSocket();
-        } catch (SocketException e) {
-            Log.w(BUNDLE_KEY, "runTask: Failed to open socket, data not sent", e);
-            task.onError("Failed to open socket");
-            return;
-        }
-
-        Log.i(BUNDLE_KEY, "runTask: Socket Open");
+        Log.i(TAG, "runTask: Properties parsed");
 
         String encPayload, token;
         // encrypt data
@@ -95,7 +84,7 @@ public class UDPTaskRunner extends AbstractTaskRunner {
             // encrypt [[lat,lng,time]], key, iv
             encPayload = encrypt(key, data, iv);
         } catch (Exception e) {
-            Log.w(BUNDLE_KEY, "runTask: Failed to encrypt payload", e);
+            Log.w(TAG, "runTask: Failed to encrypt payload", e);
             task.onError("Failed to encrypt payload");
             return;
         }
@@ -105,7 +94,7 @@ public class UDPTaskRunner extends AbstractTaskRunner {
         payload.addProperty("token", token);
         payload.addProperty("data", encPayload);
 
-        Log.i(BUNDLE_KEY, "runTask: Payload Encrypted");
+        Log.i(TAG, "runTask: Payload Encrypted");
 
         // udp send {token, encrypted data} to mothership:8911
         try {
@@ -113,17 +102,26 @@ public class UDPTaskRunner extends AbstractTaskRunner {
             int port = properties.getInt("port");
             // stringify and byteify payload
             byte[] sPayload = payload.toString().getBytes();
-            DatagramPacket packet = new DatagramPacket(sPayload, sPayload.length, InetAddress.getByName(url), port);
-            // send payload
-            socket.send(packet);
-            Log.d(BUNDLE_KEY, "runTask: Packet sent successfully");
+            Thread thread = new Thread(() -> {
+                DatagramSocket socket = null;
+                try {
+                    socket = new DatagramSocket();
+                    DatagramPacket packet = new DatagramPacket(sPayload, sPayload.length, InetAddress.getByName(url),
+                            port);
+                    socket.send(packet);
+                } catch (IOException e) {
+                    Log.e(TAG, "runTask: Failed to send packet {}", e);
+                } finally {
+                    if (socket != null)
+                        socket.close();
+                }
+            });
+            thread.start();
+            Log.d(TAG, "runTask: Packet sent successfully");
             task.onResult("success");
-        } catch (IOException | JSONException e) {
-            Log.w(BUNDLE_KEY, "runTask: Failed to send payload", e);
+        } catch (JSONException e) {
+            Log.w(TAG, "runTask: Failed to send payload", e);
             task.onError("Failed to send payload");
-        } finally {
-            // udp socket close
-            socket.close();
         }
     }
 

@@ -42,8 +42,8 @@ public class UDPTaskRunner extends AbstractTaskRunner {
 
     @Override
     public void runTask(final Task task) {
-        DatagramSocket socket;
         String headlessTask = PluginRegistry.getInstance().getHeadlessTask();
+        Log.i(BUNDLE_KEY, "runTask: " + task.getName() + " " + headlessTask);
 
         if (headlessTask == null) {
             task.onError("Cannot run task due to task not registered");
@@ -67,6 +67,7 @@ public class UDPTaskRunner extends AbstractTaskRunner {
             return;
         }
 
+        DatagramSocket socket;
         // udp socket open
         try {
             socket = new DatagramSocket();

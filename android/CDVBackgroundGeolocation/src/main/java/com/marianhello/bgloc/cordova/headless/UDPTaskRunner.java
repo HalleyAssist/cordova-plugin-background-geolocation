@@ -66,6 +66,8 @@ public class UDPTaskRunner extends AbstractTaskRunner {
             return;
         }
 
+        Log.i(BUNDLE_KEY, "runTask: Properties parsed");
+
         DatagramSocket socket;
         // udp socket open
         try {
@@ -76,6 +78,8 @@ public class UDPTaskRunner extends AbstractTaskRunner {
             return;
         }
 
+        Log.i(BUNDLE_KEY, "runTask: Socket Open");
+
         String encPayload, token;
         // encrypt data
         try {
@@ -85,6 +89,7 @@ public class UDPTaskRunner extends AbstractTaskRunner {
             // get token
             token = properties.getString("token");
             Bundle location = task.getBundle().getBundle("params");
+            assert location != null;
             String data = "[[" + location.getDouble("latitude") + "," + location.getDouble("longitude") + ","
                     + location.getLong("time") + "]]";
             // encrypt [[lat,lng,time]], key, iv
@@ -99,6 +104,8 @@ public class UDPTaskRunner extends AbstractTaskRunner {
         // package payload: { token: jwt token, data: encrypted data }
         payload.addProperty("token", token);
         payload.addProperty("data", encPayload);
+
+        Log.i(BUNDLE_KEY, "runTask: Payload Encrypted");
 
         // udp send {token, encrypted data} to mothership:8911
         try {

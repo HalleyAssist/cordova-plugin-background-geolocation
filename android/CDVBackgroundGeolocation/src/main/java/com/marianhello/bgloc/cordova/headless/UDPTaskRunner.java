@@ -51,9 +51,8 @@ public class UDPTaskRunner extends AbstractTaskRunner {
         }
         // headlessTask (function passed to plugin from js as string)
         // task.getName(): Event name
-        // task.getString(): json stringified location object
-        // if name != location return task.onResult('not interested')
-        if (!task.getName().equals("location")) {
+        // task.getBundle(): location bundle
+        if (task.getName().equals("activity")) {
             task.onResult("Not interested");
             return;
         }

@@ -1,46 +1,167 @@
 package com.marianhello.bgloc.cordova.headless;
 
 import android.content.Context;
+import android.util.Base64;
+import android.util.Log;
 
+import com.google.gson.JsonObject;
 import com.marianhello.bgloc.cordova.PluginRegistry;
+import com.marianhello.bgloc.data.BackgroundLocation;
 import com.marianhello.bgloc.headless.AbstractTaskRunner;
+import com.marianhello.bgloc.headless.LocationTask;
 import com.marianhello.bgloc.headless.Task;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
+
 public class UDPTaskRunner extends AbstractTaskRunner {
-    // private udp
-    public static String BUNDLE_KEY = "UDPTR";
+    public static final String BUNDLE_KEY = "UdpTaskRunner";
 
     public UDPTaskRunner() {
     }
 
     @Override
     public void runTask(final Task task) {
+        DatagramSocket socket;
         String headlessTask = PluginRegistry.getInstance().getHeadlessTask();
 
         if (headlessTask == null) {
             task.onError("Cannot run task due to task not registered");
             return;
         }
-
         // headlessTask (function passed to plugin from js as string)
         // task.getName(): Event name
         // task.getString(): json stringified location object
-        //
         // if name != location return task.onResult('not interested')
-        // get key
-        // get token
-        // encrypt [[lat,lng,time]], key, iv
-        // udp socket open
-        // udp send {token, encrypted data} to mothership:8911
-        // udp socket close
-        // task.onResult('success')
-        // catch task.onError('error')
+        if (!task.getName().equals("location")) {
+            task.onResult("Not interested");
+            return;
+        }
 
+        JSONObject properties;
+        try {
+            properties = new JSONObject(headlessTask);
+        } catch (JSONException e) {
+            Log.w(BUNDLE_KEY, "runTask: Failed to parse properties", e);
+            task.onError("Failed to parse properties");
+            return;
+        }
+
+        // udp socket open
+        try {
+            socket = new DatagramSocket();
+        } catch (SocketException e) {
+            Log.w(BUNDLE_KEY, "runTask: Failed to open socket, data not sent", e);
+            task.onError("Failed to open socket");
+            return;
+        }
+
+        String encPayload, token;
+        //  encrypt data
+        try {
+            // get key
+            String key = properties.getString("key");
+            String iv = properties.getString("iv");
+            // get token
+            token = properties.getString("token");
+            BackgroundLocation location = ((LocationTask) task).getLocation();
+            String data = "[[" + location.getLatitude() + "," + location.getLongitude() + "," + location.getTime() + "]]";
+            // encrypt [[lat,lng,time]], key, iv
+            encPayload = encrypt(key, data, iv);
+        } catch (Exception e) {
+            Log.w(BUNDLE_KEY, "runTask: Failed to encrypt payload", e);
+            task.onError("Failed to encrypt payload");
+            return;
+        }
+
+        JsonObject payload = new JsonObject();
+        //  package payload: { token: jwt token, data: encrypted data }
+        payload.addProperty("token", token);
+        payload.addProperty("data", encPayload);
+
+        // udp send {token, encrypted data} to mothership:8911
+        try {
+            String url = properties.getString("mothershipUrl");
+            int port = properties.getInt("port");
+            //  stringify and byteify payload
+            byte[] sPayload = payload.toString().getBytes();
+            DatagramPacket packet = new DatagramPacket(sPayload, sPayload.length, InetAddress.getByName(url), port);
+            //  send payload
+            socket.send(packet);
+            Log.d(BUNDLE_KEY, "runTask: Packet sent successfully");
+            task.onResult("success");
+        } catch (IOException | JSONException e) {
+            Log.w(BUNDLE_KEY, "runTask: Failed to send payload", e);
+            task.onError("Failed to send payload");
+        } finally {
+            // udp socket close
+            socket.close();
+        }
     }
 
-    @Override
-    public void setContext(Context context) {
-        super.setContext(context);
-        // create udp socket
+    // Encryption "borrowed" from cordova-aes256
+
+    /**
+     * <p>
+     * To perform the AES256 encryption
+     * </p>
+     *
+     * @param secureKey A 32 bytes string, which will used as input key for AES256
+     *                  encryption
+     * @param value     A string which will be encrypted
+     * @param iv        A 16 bytes string, which will used as initial vector for
+     *                  AES256 encryption
+     * @return AES Encrypted string
+     * @throws InvalidKeySpecException, NoSuchPaddingException, NoSuchAlgorithmException, BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException, InvalidKeyException
+     */
+    private String encrypt(String secureKey, String value, String iv) throws InvalidKeySpecException, NoSuchPaddingException, NoSuchAlgorithmException, BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException, InvalidKeyException {
+        byte[] pbkdf2SecuredKey = generatePBKDF2(secureKey.toCharArray(), "hY0wTq6xwc6ni01G".getBytes(StandardCharsets.UTF_8));
+
+        IvParameterSpec ivParameterSpec = new IvParameterSpec(iv.getBytes(StandardCharsets.UTF_8));
+        SecretKeySpec secretKeySpec = new SecretKeySpec(pbkdf2SecuredKey, "AES");
+
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec);
+
+        byte[] encrypted = cipher.doFinal(value.getBytes());
+
+        return Base64.encodeToString(encrypted, Base64.DEFAULT);
+    }
+
+    /**
+     * @param password The password
+     * @param salt     The salt
+     * @return PBKDF2 secured key
+     * @throws InvalidKeySpecException, NoSuchAlgorithmException
+     * @see <a href="https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/PBEKeySpec.html">
+     * https://docs.oracle.com/javase/8/docs/api/javax/crypto/spec/PBEKeySpec.html</a>
+     */
+    private static byte[] generatePBKDF2(char[] password, byte[] salt) throws InvalidKeySpecException, NoSuchAlgorithmException {
+        SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+        KeySpec keySpec = new PBEKeySpec(password, salt, 1001, 256);
+        SecretKey secretKey = secretKeyFactory.generateSecret(keySpec);
+        return secretKey.getEncoded();
     }
 }
